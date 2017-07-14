@@ -243,7 +243,6 @@ var getMockValue = function (version, schema) {
   return value;
 };
 var mockResponse = function (req, res, next, handlerName) {
-  var method = req.method.toLowerCase();
   var operation = req.swagger.operation;
   var sendResponse = function (err, response) {
     if (err) {
@@ -265,6 +264,10 @@ var mockResponse = function (req, res, next, handlerName) {
   };
   var spec = cHelpers.getSpec(req.swagger.swaggerVersion);
   var stubResponse = 'Stubbed response for ' + handlerName;
+  var responseCodes = _.keysIn(operation.responses);
+  var firstSuccessResponseCode = responseCodes.find(function(code) {
+    return _.startsWith(code, '2');
+  });
   var apiDOrSO;
   var responseType;
 
@@ -278,16 +281,9 @@ var mockResponse = function (req, res, next, handlerName) {
   case '2.0':
     apiDOrSO = req.swagger.swaggerObject;
 
-    if (method === 'post' && operation.responses['201']) {
-      responseType = operation.responses['201'];
-
-      res.statusCode = 201;
-    } else if (method === 'delete' && operation.responses['204']) {
-      responseType = operation.responses['204'];
-
-      res.statusCode = 204;
-    } else if (operation.responses['200']) {
-      responseType = operation.responses['200'];
+    if (firstSuccessResponseCode) {
+      responseType = operation.responses[firstSuccessResponseCode];
+      res.statusCode = parseInt(firstSuccessResponseCode);
     } else if (operation.responses['default']) {
       responseType = operation.responses['default'];
     } else {
